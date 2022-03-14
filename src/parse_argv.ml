@@ -20,6 +20,11 @@ open Astring
 (* Split string into whitespace-separated substrings,
    taking into account quoting *)
 
+type quote_mode =
+  | None
+  | Single
+  | Double
+
 let parse s =
   let skip_white s = String.Sub.drop
       ~max:Sys.max_string_length
@@ -28,9 +33,10 @@ let parse s =
   let split s =
     let rec inner in_quoted s so_far acc =
       let is_data = function
-        | '\\' -> false
-        | '"' -> false
-        | c when Char.Ascii.is_white c -> in_quoted
+        | '\'' -> in_quoted = Double
+        | '\\' -> in_quoted = Single
+        | '"' -> in_quoted = Single
+        | c when Char.Ascii.is_white c -> in_quoted != None
         | _ -> true in
 
       let data,rem = String.Sub.span
@@ -41,9 +47,22 @@ let parse s =
       | Some c when Char.Ascii.is_white c ->
         let so_far = List.rev (data :: so_far) in
         inner in_quoted (skip_white rem) [] ((String.Sub.concat so_far)::acc)
+      | Some '\'' ->
+        let so_far = data :: so_far in
+        let q = match in_quoted with
+        | None -> Single
+        | Single -> None
+        | Double -> failwith "Internal argv parser error"
+        in
+        inner q (String.Sub.tail rem) so_far acc
       | Some '"' ->
         let so_far = data :: so_far in
-        inner (not in_quoted) (String.Sub.tail rem) so_far acc
+        let q = match in_quoted with
+        | None -> Double
+        | Double -> None
+        | Single -> failwith "Internal argv parser error"
+        in
+        inner q (String.Sub.tail rem) so_far acc
       | Some '\\' ->
         let rem = String.Sub.tail rem in
         begin match String.Sub.head rem with
@@ -60,7 +79,7 @@ let parse s =
         let so_far = List.rev (data :: so_far) in
         Ok (List.map (String.Sub.to_string) (List.rev ((String.Sub.concat so_far) :: acc)))
     in
-    inner false s [] []
+    inner None s [] []
   in
   match split (String.sub s |> skip_white) with
   | Error s -> Error s
