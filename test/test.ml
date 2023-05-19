@@ -25,7 +25,7 @@ let tests =
   [ "foo bar baz", ["foo"; "bar"; "baz"];
     {|foo "bar" baz|}, ["foo"; "bar"; "baz"];
     {|f\ oo b\"r baz|}, ["f oo"; "b\"r"; "baz"];
-    {|foo bar"bie"boo baz|}, ["foo"; "bar"; "bie"; "boo"; "baz"];
+    {|foo bar"bie"boo baz|}, ["foo"; "barbieboo"; "baz"];
     {|foo "bar baz"|}, ["foo"; "bar baz"];
     {|foo bar\ baz|}, ["foo"; "bar baz"];
     "  ", [];

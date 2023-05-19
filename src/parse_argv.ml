@@ -44,10 +44,10 @@ let parse s =
       | Escaped, c -> loop acc (c :: curr) Normal (idx + 1)
       | Quoted_escaped, c -> loop acc (c :: curr) Quoted (idx + 1)
       | Quoted, '\\' -> loop acc curr Quoted_escaped (idx + 1)
-      | Quoted, '"' -> loop (chars_to_str curr @ acc) [] Normal (idx + 1)
+      | Quoted, '"' -> loop acc curr Normal (idx + 1)
       | Quoted, c -> loop acc (c :: curr) Quoted (idx + 1)
       | Normal, '\\' -> loop acc curr Escaped (idx + 1)
-      | Normal, '"' -> loop (chars_to_str curr @ acc) [] Quoted (idx + 1)
+      | Normal, '"' -> loop acc curr Quoted (idx + 1)
       | Normal, c -> loop acc (c :: curr) Normal (idx + 1)
   in
   loop [] [] Normal 0
