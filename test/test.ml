@@ -29,6 +29,8 @@ let tests =
     {|foo "bar baz"|}, ["foo"; "bar baz"];
     {|foo bar\ baz|}, ["foo"; "bar baz"];
     "  ", [];
+    {|"" is empty|}, [""; "is"; "empty"];
+    {|some-empty-string: ""|}, ["some-empty-string:"; ""];
   ]
 
 let test_parse () =

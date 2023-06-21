@@ -24,30 +24,40 @@ type state =
   | Escaped
   | Normal
 
-let chars_to_str = function
-  | [] -> []
-  | chars ->
-    let chars = List.rev chars in
-    [ String.init (List.length chars) (List.nth chars) ]
+let chars_to_str chars =
+  let chars = List.rev chars in
+  [String.init (List.length chars) (List.nth chars)]
+
+(* We keep track of the previous state. If it was [Quoted] we unconditionally
+   add the string. [chars_to_str] is only called when in [Normal] state, so
+   that means the character before the space or end of input must have been end
+   of quote. In that case we want the string even if it's the empty string. *)
+let chars_to_str prev_state =
+  match prev_state with
+  | Quoted -> chars_to_str
+  | _ ->
+    function
+    | [] -> []
+    | chars -> chars_to_str chars
 
 let parse s =
   let l = String.length s in
-  let rec loop acc curr state idx =
+  let rec loop acc curr prev_state state idx =
     if idx = l then
       if state = Normal then
-        Ok (List.rev (chars_to_str curr @ acc))
+        Ok (List.rev (chars_to_str prev_state curr @ acc))
       else
         Error "bad input line - either escaped or quoted or both"
     else
       match state, String.unsafe_get s idx with
-      | Normal, ' ' -> loop (chars_to_str curr @ acc) [] state (idx + 1)
-      | Escaped, c -> loop acc (c :: curr) Normal (idx + 1)
-      | Quoted_escaped, c -> loop acc (c :: curr) Quoted (idx + 1)
-      | Quoted, '\\' -> loop acc curr Quoted_escaped (idx + 1)
-      | Quoted, '"' -> loop acc curr Normal (idx + 1)
-      | Quoted, c -> loop acc (c :: curr) Quoted (idx + 1)
-      | Normal, '\\' -> loop acc curr Escaped (idx + 1)
-      | Normal, '"' -> loop acc curr Quoted (idx + 1)
-      | Normal, c -> loop acc (c :: curr) Normal (idx + 1)
+      | Normal, ' ' -> loop (chars_to_str prev_state curr @ acc) [] state state (idx + 1)
+      | Escaped, c -> loop acc (c :: curr) state Normal (idx + 1)
+      | Quoted_escaped, c -> loop acc (c :: curr) state Quoted (idx + 1)
+      | Quoted, '\\' -> loop acc curr state Quoted_escaped (idx + 1)
+      | Quoted, '"' -> loop acc curr state Normal (idx + 1)
+      | Quoted, c -> loop acc (c :: curr) state Quoted (idx + 1)
+      | Normal, '\\' -> loop acc curr state Escaped (idx + 1)
+      | Normal, '"' -> loop acc curr state Quoted (idx + 1)
+      | Normal, c -> loop acc (c :: curr) state Normal (idx + 1)
   in
-  loop [] [] Normal 0
+  loop [] [] Normal Normal 0
